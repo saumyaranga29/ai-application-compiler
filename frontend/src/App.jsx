@@ -522,7 +522,37 @@ export default function App() {
             TAB 1: COMPILER WORKSPACE
             ========================================== */}
         {activeTab === "compiler" && (
-          <div className="workspace-layout animate-slide-up">
+          <div className="animate-slide-up">
+            {/* Stunning Awwwards-style Hero Section */}
+            <div className="hero-section">
+              <div className="hero-badge">
+                <Sparkles size={12} className="hero-badge-icon" color="var(--color-secondary)" />
+                <span>Deterministic Codebase Compiler</span>
+              </div>
+              <h1 className="hero-title">
+                Compile Natural Language <br/>
+                Into <span className="gradient-text-purple">Verified Web Apps</span>
+              </h1>
+              <p className="hero-subtitle">
+                Our multi-stage compilation pipeline analyzes raw prompt requirements, designs architecture, generates secure configurations, heals schemas, and runs executable sandbox applications instantly.
+              </p>
+              <div className="hero-stats">
+                <div className="hero-stat-item">
+                  <span className="hero-stat-num">4 Phases</span>
+                  <span className="hero-stat-lbl">Compiler Pipeline</span>
+                </div>
+                <div className="hero-stat-item">
+                  <span className="hero-stat-num">100%</span>
+                  <span className="hero-stat-lbl">Cross-Layer Verified</span>
+                </div>
+                <div className="hero-stat-item">
+                  <span className="hero-stat-num">0 Lines</span>
+                  <span className="hero-stat-lbl">Prompt Engineering Needed</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="workspace-layout">
             {/* Left Prompt Input Panel */}
             <div className="glass-panel prompt-panel glass-card-glow">
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -1077,6 +1107,7 @@ export default function App() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         )}
 
