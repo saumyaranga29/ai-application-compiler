@@ -940,7 +940,7 @@ export default function App() {
                               if (comp.type === "stats-grid") {
                                 return (
                                   <div key={compIdx} className="sim-stats-grid">
-                                    {comp.items.map((stat, sIdx) => (
+                                    {(comp.items || []).map((stat, sIdx) => (
                                       <div key={sIdx} className="sim-stat-card">
                                         <div className="sim-stat-info">
                                           <span className="sim-stat-label">{stat.label}</span>

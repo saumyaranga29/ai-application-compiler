@@ -101,6 +101,10 @@ const templates = {
               type: "stats-grid",
               title: "Performance Statistics",
               dataSource: "/api/deals",
+              items: [
+                { label: "Total Opportunities", value: "count(deals)", icon: "Database" },
+                { label: "Active Contacts", value: "count(contacts)", icon: "Users" }
+              ],
               columns: [],
               actions: {}
             },
@@ -230,6 +234,10 @@ const templates = {
               type: "stats-grid",
               title: "Productivity Metrics",
               dataSource: "/api/tasks",
+              items: [
+                { label: "Total Assigned Tasks", value: "count(tasks)", icon: "Database" },
+                { label: "Completed Tasks", value: "count(tasks, status='completed')", icon: "Shield" }
+              ],
               columns: [],
               actions: {}
             },
@@ -340,6 +348,10 @@ const templates = {
               type: "stats-grid",
               title: "Core Metrics",
               dataSource: "/api/members",
+              items: [
+                { label: "Total Memberships", value: "count(members)", icon: "Users" },
+                { label: "Premium Tier Accounts", value: "count(members, tier='Premium')", icon: "CreditCard" }
+              ],
               columns: [],
               actions: {}
             },
@@ -452,6 +464,10 @@ const templates = {
               type: "stats-grid",
               title: "Daily Operational Summary",
               dataSource: "/api/orders",
+              items: [
+                { label: "Total Orders Placed", value: "count(orders)", icon: "Database" },
+                { label: "Orders Ready for Service", value: "count(orders, status='ready')", icon: "Shield" }
+              ],
               columns: [],
               actions: {}
             },
@@ -565,6 +581,10 @@ const templates = {
               type: "stats-grid",
               title: "Hospital Booking Metrics",
               dataSource: "/api/appointments",
+              items: [
+                { label: "Total Schedules", value: "count(appointments)", icon: "Database" },
+                { label: "Confirmed Consultations", value: "count(appointments, status='confirmed')", icon: "Shield" }
+              ],
               columns: [],
               actions: {}
             },
@@ -734,6 +754,9 @@ function generateGenericFallbackSchema(promptText) {
           type: "stats-grid",
           title: "System Performance Metrics",
           dataSource: `/api/${tables[0].name}`,
+          items: [
+            { label: "Total Records", value: `count(${tables[0].name})`, icon: "Database" }
+          ],
           columns: [],
           actions: {}
         },
