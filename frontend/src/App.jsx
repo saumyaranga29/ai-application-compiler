@@ -962,6 +962,14 @@ export default function App() {
                                 const tableName = endpoint?.dbOperation?.table;
                                 const records = mockDB[tableName] || [];
                                 
+                                // Normalize columns dynamically (supports string array or object array)
+                                const normalizedCols = (comp.columns || []).map(col => {
+                                  if (typeof col === "string") {
+                                    return { header: col.charAt(0).toUpperCase() + col.slice(1), key: col };
+                                  }
+                                  return col;
+                                });
+
                                 return (
                                   <div key={compIdx} className="sim-card">
                                     <div className="sim-card-header">
@@ -971,9 +979,21 @@ export default function App() {
                                           className="btn btn-primary"
                                           style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", borderRadius: "6px" }}
                                           onClick={() => {
+                                            const actionWithFields = { ...comp.actions.create };
+                                            if (!actionWithFields.fields) {
+                                              actionWithFields.fields = normalizedCols
+                                                .filter(c => c.key !== "id")
+                                                .map(c => ({
+                                                  name: c.key,
+                                                  label: c.header,
+                                                  type: "text",
+                                                  required: true
+                                                }));
+                                            }
+
                                             setCrudModalConfig({
-                                              title: `Create ${tableName.slice(0, -1)}`,
-                                              action: comp.actions.create,
+                                              title: `Create ${tableName ? tableName.slice(0, -1) : 'Record'}`,
+                                              action: actionWithFields,
                                               table: tableName
                                             });
                                             setShowCrudModal(true);
@@ -988,7 +1008,7 @@ export default function App() {
                                       <table className="custom-table">
                                         <thead>
                                           <tr>
-                                            {comp.columns.map((col, cIdx) => (
+                                            {normalizedCols.map((col, cIdx) => (
                                               <th key={cIdx}>{col.header}</th>
                                             ))}
                                             {comp.type === "crud-table" && <th>Actions</th>}
@@ -997,14 +1017,14 @@ export default function App() {
                                         <tbody>
                                           {records.length === 0 ? (
                                             <tr>
-                                              <td colSpan={comp.columns.length + (comp.type === "crud-table" ? 1 : 0)} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
+                                              <td colSpan={normalizedCols.length + (comp.type === "crud-table" ? 1 : 0)} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
                                                 No database records found.
                                               </td>
                                             </tr>
                                           ) : (
                                             records.map((row, rIdx) => (
                                               <tr key={rIdx}>
-                                                {comp.columns.map((col, cIdx) => (
+                                                {normalizedCols.map((col, cIdx) => (
                                                   <td key={cIdx}>
                                                     {col.key === "status" ? (
                                                       <span className={`badge ${
