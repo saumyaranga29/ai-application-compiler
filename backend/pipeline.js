@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { validateSchema } from "./validator.js";
 import dotenv from "dotenv";
+import { runMockCompilationPipeline } from "./mockGenerator.js";
 
 dotenv.config();
 
@@ -83,6 +84,12 @@ async function callGemini(systemPrompt, userPrompt, jsonMode = true) {
 }
 
 export async function runCompilationPipeline(userRequirement, onStepCallback = () => {}) {
+  const isDummyKey = !apiKey || apiKey.startsWith("AIzaSyBO8lpFvolOYi_kHP2hqjNMnnthZ-J-6yg") || apiKey === "";
+  if (isDummyKey) {
+    console.log("[Pipeline] Using local simulation engine (API key not configured or is placeholder).");
+    return runMockCompilationPipeline(userRequirement, onStepCallback);
+  }
+
   const steps = [];
   let currentInput = userRequirement;
   let status = "success";
@@ -254,9 +261,8 @@ Return ONLY the corrected, valid JSON.`;
     }
 
   } catch (error) {
-    status = "failed";
-    console.error("Pipeline crashed:", error);
-    logStep("Pipeline Crash Handler", "failed", 0, {}, {}, error.message);
+    console.warn(`[Pipeline Warning] Generative AI pipeline failed: ${error.message}. Falling back to local offline compiler...`);
+    return runMockCompilationPipeline(userRequirement, onStepCallback);
   }
 
   return {

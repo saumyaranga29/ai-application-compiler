@@ -24,7 +24,8 @@ import {
   Clock,
   DollarSign,
   AlertTriangle,
-  Code
+  Code,
+  RefreshCw
 } from "lucide-react";
 import "./App.css";
 
