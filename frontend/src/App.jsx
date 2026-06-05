@@ -59,6 +59,17 @@ const SEED_DATA = {
   ]
 };
 
+const Base44Logo = () => (
+  <svg viewBox="0 0 100 80" width="34" height="30" style={{ display: "block" }}>
+    <path d="M 10,70 A 40,40 0 0,1 90,70" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" />
+    <path d="M 16,70 A 34,34 0 0,1 84,70" fill="none" stroke="#f97316" strokeWidth="6" strokeLinecap="round" />
+    <path d="M 22,70 A 28,28 0 0,1 78,70" fill="none" stroke="#eab308" strokeWidth="6" strokeLinecap="round" />
+    <path d="M 28,70 A 22,22 0 0,1 72,70" fill="none" stroke="#22c55e" strokeWidth="6" strokeLinecap="round" />
+    <path d="M 34,70 A 16,16 0 0,1 66,70" fill="none" stroke="#3b82f6" strokeWidth="6" strokeLinecap="round" />
+    <path d="M 40,70 A 10,10 0 0,1 60,70" fill="none" stroke="#a855f7" strokeWidth="6" strokeLinecap="round" />
+  </svg>
+);
+
 const DEFAULT_PROMPT_PRESET = "Build a CRM with login, contacts, dashboard, role-based access, and premium plan with payments. Admins can see analytics.";
 
 export default function App() {
@@ -79,6 +90,7 @@ export default function App() {
   const [compilationError, setCompilationError] = useState(null);
   const [consoleLogs, setConsoleLogs] = useState([]);
   const [expandedStage, setExpandedStage] = useState(null);
+  const [mockPlanToggle, setMockPlanToggle] = useState(false);
 
   // ==========================================
   // RUNTIME APP SIMULATOR STATE
@@ -477,43 +489,50 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Header */}
-      <header className="app-header">
-        <div className="brand">
-          <div className="brand-logo">C</div>
-          <div>
-            <div className="brand-name">AI APP COMPILER</div>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", letterSpacing: "0.5px" }}>
-              DECISION ENGINE & COMPILER RUNTIME
-            </span>
+      <header className="app-header-base44">
+        <div className="brand-base44" onClick={() => setActiveTab("compiler")} style={{ cursor: "pointer" }}>
+          <Base44Logo />
+          <div className="brand-name-base44">
+            AI<span>Compiler</span>
           </div>
         </div>
 
-        <nav className="navigation-tabs">
+        <nav className="navigation-tabs-base44">
+          <div className="nav-dropdown-trigger-base44" onClick={() => setActiveTab("compiler")}>
+            Product <span className="dropdown-caret-base44">▼</span>
+          </div>
+          <div className="nav-dropdown-trigger-base44" onClick={() => setActiveTab("compiler")}>
+            Use Cases <span className="dropdown-caret-base44">▼</span>
+          </div>
+          <div className="nav-dropdown-trigger-base44" onClick={() => setActiveTab("architecture")}>
+            Resources <span className="dropdown-caret-base44">▼</span>
+          </div>
           <button 
-            className={`nav-tab ${activeTab === "compiler" ? "active" : ""}`}
-            onClick={() => setActiveTab("compiler")}
-          >
-            <Terminal size={16} /> Compiler Workspace
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === "evaluator" ? "active" : ""}`}
-            onClick={() => setActiveTab("evaluator")}
-          >
-            <Activity size={16} /> Evaluation Suite
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === "tradeoffs" ? "active" : ""}`}
+            className={`nav-tab-base44 ${activeTab === "tradeoffs" ? "active" : ""}`}
             onClick={() => setActiveTab("tradeoffs")}
           >
-            <Sliders size={16} /> Cost vs Quality
+            Pricing
           </button>
           <button 
-            className={`nav-tab ${activeTab === "architecture" ? "active" : ""}`}
-            onClick={() => setActiveTab("architecture")}
+            className={`nav-tab-base44 ${activeTab === "evaluator" ? "active" : ""}`}
+            onClick={() => setActiveTab("evaluator")}
           >
-            <Layers size={16} /> Architecture
+            Enterprise
           </button>
         </nav>
+
+        <div className="header-right-base44">
+          <button className="globe-btn-base44" onClick={() => showToast("Language switcher clicked!")}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" x2="22" y1="12" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+          </button>
+          <button className="start-building-btn-base44" onClick={() => setActiveTab("compiler")}>
+            Start Building
+          </button>
+        </div>
       </header>
 
       {/* Main content grid */}
@@ -522,99 +541,153 @@ export default function App() {
             TAB 1: COMPILER WORKSPACE
             ========================================== */}
         {activeTab === "compiler" && (
-          <div className="animate-slide-up">
-            {/* Stunning Awwwards-style Hero Section */}
-            <div className="hero-section">
-              <div className="hero-badge">
-                <Sparkles size={12} className="hero-badge-icon" color="var(--color-secondary)" />
-                <span>Deterministic Codebase Compiler</span>
+          <div className="animate-slide-up compiler-tab-layout">
+            
+            {/* Center navigation selector */}
+            <div className="center-tab-selector-container">
+              <div className="center-tab-selector">
+                <button 
+                  className={`tab-selector-btn ${activeTab === "compiler" ? "active" : ""}`}
+                  onClick={() => setActiveTab("compiler")}
+                >
+                  Apps
+                </button>
+                <button 
+                  className={`tab-selector-btn ${activeTab === "evaluator" ? "active" : ""}`}
+                  onClick={() => setActiveTab("evaluator")}
+                >
+                  Superagents <span className="badge-new">New</span>
+                </button>
               </div>
-              <h1 className="hero-title">
-                Compile Natural Language <br/>
-                Into <span className="gradient-text-purple">Verified Web Apps</span>
+            </div>
+
+            {/* AI Compiler Hero Section */}
+            <div className="hero-section-base44">
+              <h1 className="hero-title-base44">
+                Compile requirements into secure, running web systems
               </h1>
-              <p className="hero-subtitle">
-                Our multi-stage compilation pipeline analyzes raw prompt requirements, designs architecture, generates secure configurations, heals schemas, and runs executable sandbox applications instantly.
+              <p className="hero-subtitle-base44">
+                AI Compiler transforms open-ended instructions into validated database, API, and UI schemas, executing a working sandbox application instantly.
               </p>
-              <div className="hero-stats">
-                <div className="hero-stat-item">
-                  <span className="hero-stat-num">4 Phases</span>
-                  <span className="hero-stat-lbl">Compiler Pipeline</span>
+            </div>
+
+            {/* Centered Prompt Input Area */}
+            <div className="prompt-container-base44">
+              <div className="prompt-input-card-base44">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Build me a travel itinerary app for weekend getaways"
+                  disabled={isCompiling}
+                  rows={2}
+                  className="prompt-textarea-base44"
+                />
+                
+                <div className="prompt-input-bottom-row">
+                  <div className="bottom-row-left">
+                    <button 
+                      className="bottom-row-btn-plus" 
+                      type="button" 
+                      onClick={() => showToast("Additional config assets loaded successfully!")}
+                      title="Add files or context assets"
+                    >
+                      <Plus size={20} />
+                    </button>
+                    
+                    <div className="plan-toggle-container">
+                      <label className="switch">
+                        <input 
+                          type="checkbox" 
+                          checked={mockPlanToggle} 
+                          onChange={(e) => {
+                            setMockPlanToggle(e.target.checked);
+                            showToast(e.target.checked ? "Plan Mode Activated: Detailed multi-layer compiler checks enabled." : "Plan Mode Deactivated.");
+                          }} 
+                        />
+                        <span className="slider round"></span>
+                      </label>
+                      <span className="plan-toggle-label">Plan</span>
+                      <span className="info-tooltip-trigger" title="Enable advanced planning mode to validate schemas and resolve dependencies prior to compiling.">
+                        <HelpCircle size={14} />
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="bottom-row-right">
+                    <button 
+                      className="bottom-row-btn-mic" 
+                      type="button" 
+                      onClick={() => showToast("Voice input activation simulation...")}
+                      title="Voice Command"
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" x2="12" y1="19" y2="22" />
+                      </svg>
+                    </button>
+                    
+                    <button 
+                      className="bottom-row-submit-btn" 
+                      onClick={handleCompile}
+                      disabled={isCompiling || !prompt.trim()}
+                      title="Compile Application"
+                    >
+                      {isCompiling ? (
+                        <RefreshCw className="animate-spin" size={16} />
+                      ) : (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                          <line x1="12" x2="12" y1="19" y2="5" />
+                          <polyline points="5 12 12 5 19 12" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div className="hero-stat-item">
-                  <span className="hero-stat-num">100%</span>
-                  <span className="hero-stat-lbl">Cross-Layer Verified</span>
-                </div>
-                <div className="hero-stat-item">
-                  <span className="hero-stat-num">0 Lines</span>
-                  <span className="hero-stat-lbl">Prompt Engineering Needed</span>
+              </div>
+
+              {/* Preset pills styled horizontally */}
+              <div className="presets-section-base44">
+                <span className="presets-title-base44">NOT SURE WHERE TO START? TRY ONE OF THESE:</span>
+                <div className="presets-container-base44">
+                  <button 
+                    className="preset-btn-base44"
+                    onClick={() => setPrompt("Build a reporting dashboard with active users, revenue metrics charts, export CSV button, and user management table. Admins see analytics.")}
+                  >
+                    Reporting Dashboard
+                  </button>
+                  <button 
+                    className="preset-btn-base44"
+                    onClick={() => setPrompt("Create a gaming tournament platform. Users can register teams, join match lobbies, and view leaderboard statistics. Admins update tournament scores.")}
+                  >
+                    Gaming Platform
+                  </button>
+                  <button 
+                    className="preset-btn-base44"
+                    onClick={() => setPrompt("Build an employee onboarding portal where new hires upload documents, check off training tasks, and message HR. Admins verify uploads.")}
+                  >
+                    Onboarding Portal
+                  </button>
+                  <button 
+                    className="preset-btn-base44"
+                    onClick={() => setPrompt("Create a room layout planner. Users design rooms, add mock 3D furniture dimensions, calculate costs of components, and save designs. Premium plan allows PDF export.")}
+                  >
+                    Room Visualizer
+                  </button>
+                  <button 
+                    className="preset-btn-base44"
+                    onClick={() => setPrompt("Build a professional networking directory. Users create profiles, filter connections by skill, and message. Admins ban spam accounts.")}
+                  >
+                    Networking App
+                  </button>
                 </div>
               </div>
             </div>
 
             <div className="workspace-layout">
-            {/* Left Prompt Input Panel */}
-            <div className="glass-panel prompt-panel glass-card-glow">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Sparkles size={18} color="var(--color-primary)" />
-                <h3 style={{ fontSize: "1.1rem" }}>Define Your Application</h3>
-              </div>
-              <p style={{ fontSize: "0.85rem" }}>
-                Enter open-ended instructions. The compiler pipeline converts this into structures, validates relationships, and compiles to runnable state.
-              </p>
-
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe your app features, pages, API endpoints, db entities, roles, and auth rules..."
-                rows={5}
-                disabled={isCompiling}
-                style={{ resize: "none" }}
-              />
-
-              <button 
-                className="btn btn-primary"
-                onClick={handleCompile}
-                disabled={isCompiling || !prompt.trim()}
-                style={{ width: "100%" }}
-              >
-                {isCompiling ? (
-                  <>
-                    <RefreshCw className="animate-spin" size={16} /> Compiling System...
-                  </>
-                ) : (
-                  <>
-                    <Play size={16} /> Run Compiler Pipeline
-                  </>
-                )}
-              </button>
-
-              <div className="prompt-presets">
-                <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-muted)" }}>PROMPT SAMPLES</span>
-                <button 
-                  className="preset-btn"
-                  onClick={() => setPrompt("Build a CRM with login, contacts, dashboard, role-based access, and premium plan with payments. Admins can see analytics.")}
-                >
-                  Enterprise Sales CRM System
-                </button>
-                <button 
-                  className="preset-btn"
-                  onClick={() => setPrompt("Gym Membership Portal where members sign up, buy Standard/Premium tiers, and book sessions. Admins view active members and revenue charts.")}
-                >
-                  Gym Membership Manager
-                </button>
-                <button 
-                  className="preset-btn"
-                  onClick={() => setPrompt("Hospital patient appointment booking scheduler. Patients book slots, doctors manage schedule and write prescriptions, admins manage departments.")}
-                >
-                  Patient Appointment Scheduler
-                </button>
-              </div>
-            </div>
-
-            {/* Right Compiler Console & Run Screen */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-              {/* Pipeline Tracker */}
+              {/* Compiler Console & Run Screen */}
+              <div className="execution-stack-base44">
+                {/* Pipeline Tracker */}
               <div className="pipeline-visualizer">
                 <h3 style={{ fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <Layers size={18} color="var(--color-secondary)" /> Compiler Pipeline Execution Logs
@@ -1115,7 +1188,26 @@ export default function App() {
             TAB 2: EVALUATION SUITE
             ========================================== */}
         {activeTab === "evaluator" && (
-          <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div className="animate-slide-up compiler-tab-layout">
+            
+            {/* Center navigation selector */}
+            <div className="center-tab-selector-container">
+              <div className="center-tab-selector">
+                <button 
+                  className={`tab-selector-btn ${activeTab === "compiler" ? "active" : ""}`}
+                  onClick={() => setActiveTab("compiler")}
+                >
+                  Apps
+                </button>
+                <button 
+                  className={`tab-selector-btn ${activeTab === "evaluator" ? "active" : ""}`}
+                  onClick={() => setActiveTab("evaluator")}
+                >
+                  Superagents <span className="badge-new">New</span>
+                </button>
+              </div>
+            </div>
+
             <div className="glass-panel" style={{ padding: "1.5rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
                 <div>
