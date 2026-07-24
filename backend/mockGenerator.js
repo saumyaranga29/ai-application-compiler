@@ -844,12 +844,261 @@ export function generateMockConfig(promptText) {
   return generateGenericFallbackSchema(promptText);
 }
 
+export function applyIncrementalMockUpdate(previousSchema, promptText) {
+  // Deep clone previousSchema to avoid modifying original reference
+  const schema = JSON.parse(JSON.stringify(previousSchema));
+  const normPrompt = (promptText || "").toLowerCase();
+
+  // Ensure tables and layout exist
+  if (!schema.dbSchema) schema.dbSchema = { tables: [] };
+  if (!schema.dbSchema.tables) schema.dbSchema.tables = [];
+  if (!schema.apiSchema) schema.apiSchema = { endpoints: [] };
+  if (!schema.apiSchema.endpoints) schema.apiSchema.endpoints = [];
+  if (!schema.uiSchema) schema.uiSchema = { layout: { navigation: [] }, pages: [] };
+  if (!schema.uiSchema.layout) schema.uiSchema.layout = { navigation: [] };
+  if (!schema.uiSchema.layout.navigation) schema.uiSchema.layout.navigation = [];
+  if (!schema.uiSchema.pages) schema.uiSchema.pages = [];
+  if (!schema.authSchema) schema.authSchema = { roles: {}, gating: {} };
+  if (!schema.roles) schema.roles = ["admin"];
+
+  // Determine what user wants to add
+  if (normPrompt.includes("billing") || normPrompt.includes("payment") || normPrompt.includes("subscription")) {
+    // 1. Add payments/billing table
+    const tableExists = schema.dbSchema.tables.some(t => t.name === "payments");
+    if (!tableExists) {
+      schema.dbSchema.tables.push({
+        name: "payments",
+        fields: [
+          { name: "id", type: "integer", primaryKey: true, autoIncrement: true },
+          { name: "amount", type: "integer", nullable: false },
+          { name: "status", type: "string", nullable: false },
+          { name: "description", type: "string", nullable: true }
+        ]
+      });
+    }
+
+    // 2. Add API endpoints
+    const getExists = schema.apiSchema.endpoints.some(e => e.path === "/api/payments" && e.method === "GET");
+    if (!getExists) {
+      schema.apiSchema.endpoints.push({
+        path: "/api/payments",
+        method: "GET",
+        description: "Get all payment records",
+        allowedRoles: ["admin"],
+        dbOperation: { type: "SELECT", table: "payments" },
+        response: { status: 200 }
+      });
+    }
+    const postExists = schema.apiSchema.endpoints.some(e => e.path === "/api/payments" && e.method === "POST");
+    if (!postExists) {
+      schema.apiSchema.endpoints.push({
+        path: "/api/payments",
+        method: "POST",
+        description: "Initiate new mock subscription charge",
+        allowedRoles: ["admin", "customer"],
+        dbOperation: { type: "INSERT", table: "payments", fields: ["amount", "status", "description"] },
+        response: { status: 201 }
+      });
+    }
+
+    // 3. Add UI navigation + Page if not exists
+    const navExists = schema.uiSchema.layout.navigation.some(n => n.targetPage === "billing");
+    if (!navExists) {
+      schema.uiSchema.layout.navigation.push({
+        label: "Billing Tracker",
+        icon: "CreditCard",
+        targetPage: "billing",
+        allowedRoles: ["admin", "customer"]
+      });
+    }
+
+    const pageExists = schema.uiSchema.pages.some(p => p.id === "billing");
+    if (!pageExists) {
+      schema.uiSchema.pages.push({
+        id: "billing",
+        title: "Billing & Transactions",
+        components: [
+          {
+            id: "billing-stats",
+            type: "stats-grid",
+            title: "Financial Overview",
+            dataSource: "/api/payments",
+            items: [
+              { label: "Total Transactions", value: "count(payments)", icon: "Database" }
+            ],
+            columns: [],
+            actions: {}
+          },
+          {
+            id: "billing-history",
+            type: "crud-table",
+            title: "Transaction Ledger",
+            dataSource: "/api/payments",
+            columns: ["id", "amount", "status", "description"],
+            actions: {
+              create: { method: "POST", endpoint: "/api/payments" }
+            }
+          }
+        ]
+      });
+    }
+
+    // 4. Update gating
+    if (!schema.authSchema.gating) {
+      schema.authSchema.gating = {};
+    }
+    schema.authSchema.gating.premium = {
+      gatedPages: ["billing"],
+      message: "Upgrade to premium to view billing analytics and execute card updates."
+    };
+
+    // 5. Update logicSchema
+    if (!schema.logicSchema) schema.logicSchema = { rules: [] };
+    if (!schema.logicSchema.rules) schema.logicSchema.rules = [];
+    schema.logicSchema.rules.push({
+      ruleId: "billing-limit",
+      description: "Limits transactions creation to premium tier subscription upgrades."
+    });
+
+    if (!schema.roles.includes("customer")) {
+      schema.roles.push("customer");
+    }
+  } else if (normPrompt.includes("chat") || normPrompt.includes("message") || normPrompt.includes("comment")) {
+    // Add messages table, endpoints, and UI page
+    const tableExists = schema.dbSchema.tables.some(t => t.name === "messages");
+    if (!tableExists) {
+      schema.dbSchema.tables.push({
+        name: "messages",
+        fields: [
+          { name: "id", type: "integer", primaryKey: true, autoIncrement: true },
+          { name: "sender", type: "string", nullable: false },
+          { name: "content", type: "string", nullable: false }
+        ]
+      });
+    }
+
+    const getExists = schema.apiSchema.endpoints.some(e => e.path === "/api/messages" && e.method === "GET");
+    if (!getExists) {
+      schema.apiSchema.endpoints.push({
+        path: "/api/messages",
+        method: "GET",
+        description: "Get chat history",
+        allowedRoles: ["admin", "customer", "agent"],
+        dbOperation: { type: "SELECT", table: "messages" },
+        response: { status: 200 }
+      });
+    }
+
+    const postExists = schema.apiSchema.endpoints.some(e => e.path === "/api/messages" && e.method === "POST");
+    if (!postExists) {
+      schema.apiSchema.endpoints.push({
+        path: "/api/messages",
+        method: "POST",
+        description: "Send a message",
+        allowedRoles: ["admin", "customer", "agent"],
+        dbOperation: { type: "INSERT", table: "messages", fields: ["sender", "content"] },
+        response: { status: 201 }
+      });
+    }
+
+    const navExists = schema.uiSchema.layout.navigation.some(n => n.targetPage === "chat");
+    if (!navExists) {
+      schema.uiSchema.layout.navigation.push({
+        label: "Chat Lobbies",
+        icon: "Sliders",
+        targetPage: "chat",
+        allowedRoles: ["admin", "customer", "agent"]
+      });
+    }
+
+    const pageExists = schema.uiSchema.pages.some(p => p.id === "chat");
+    if (!pageExists) {
+      schema.uiSchema.pages.push({
+        id: "chat",
+        title: "Team Messaging Lobby",
+        components: [
+          {
+            id: "chat-log",
+            type: "crud-table",
+            title: "Live Feed",
+            dataSource: "/api/messages",
+            columns: ["id", "sender", "content"],
+            actions: {
+              create: { method: "POST", endpoint: "/api/messages" }
+            }
+          }
+        ]
+      });
+    }
+  } else {
+    // Add generic notifications table and sidebar link
+    const tableExists = schema.dbSchema.tables.some(t => t.name === "notifications");
+    if (!tableExists) {
+      schema.dbSchema.tables.push({
+        name: "notifications",
+        fields: [
+          { name: "id", type: "integer", primaryKey: true, autoIncrement: true },
+          { name: "event", type: "string", nullable: false },
+          { name: "timestamp", type: "string", nullable: false }
+        ]
+      });
+    }
+
+    const getExists = schema.apiSchema.endpoints.some(e => e.path === "/api/notifications" && e.method === "GET");
+    if (!getExists) {
+      schema.apiSchema.endpoints.push({
+        path: "/api/notifications",
+        method: "GET",
+        description: "Retrieve notifications",
+        allowedRoles: ["admin", "agent"],
+        dbOperation: { type: "SELECT", table: "notifications" },
+        response: { status: 200 }
+      });
+    }
+
+    const navExists = schema.uiSchema.layout.navigation.some(n => n.targetPage === "alerts");
+    if (!navExists) {
+      schema.uiSchema.layout.navigation.push({
+        label: "System Alerts",
+        icon: "Database",
+        targetPage: "alerts",
+        allowedRoles: ["admin", "agent"]
+      });
+    }
+
+    const pageExists = schema.uiSchema.pages.some(p => p.id === "alerts");
+    if (!pageExists) {
+      schema.uiSchema.pages.push({
+        id: "alerts",
+        title: "System Notifications",
+        components: [
+          {
+            id: "alerts-table",
+            type: "table",
+            title: "Warning Ledger",
+            dataSource: "/api/notifications",
+            columns: ["id", "event", "timestamp"]
+          }
+        ]
+      });
+    }
+  }
+
+  // Update app name and description
+  schema.appName = previousSchema.appName || "Iterated App Workspace";
+  schema.description = `Iterative refinement of ${previousSchema.appName || "original app"} adding support for: ${promptText}`;
+
+  return schema;
+}
+
 // 4. Mimic compilation stages with callbacks for the front-end simulation
-export async function runMockCompilationPipeline(promptText, onStepCallback = () => {}) {
+export async function runMockCompilationPipeline(promptText, onStepCallback = () => {}, previousSchema = null) {
   const steps = [];
   const startTotal = Date.now();
 
-  const mockConfig = generateMockConfig(promptText);
+  const mockConfig = previousSchema 
+    ? applyIncrementalMockUpdate(previousSchema, promptText)
+    : generateMockConfig(promptText);
 
   // Intent Output Mock
   const s1Output = {
@@ -860,7 +1109,7 @@ export async function runMockCompilationPipeline(promptText, onStepCallback = ()
     roles: mockConfig.roles,
     entities: mockConfig.dbSchema.tables.map(t => t.name),
     assumptions: [
-      "User did not supply an API key; using local offline compilation.",
+      previousSchema ? "Upgrading existing app structure incrementally." : "User did not supply an API key; using local offline compilation.",
       "Ensuring all CRUD entities and endpoints correspond directly to DB tables.",
       "Generating standard schema validation patterns."
     ]
@@ -887,7 +1136,7 @@ export async function runMockCompilationPipeline(promptText, onStepCallback = ()
   // Stage 1: Intent Extraction
   await new Promise(r => setTimeout(r, 600));
   const s1Latency = Math.floor(Math.random() * 300) + 500;
-  const s1 = { name: "Intent Extraction", status: "completed", latency: s1Latency, input: { prompt: promptText }, output: s1Output };
+  const s1 = { name: "Intent Extraction", status: "completed", latency: s1Latency, input: { prompt: promptText, previousSchema }, output: s1Output };
   steps.push(s1);
   onStepCallback(s1);
 
@@ -912,7 +1161,7 @@ export async function runMockCompilationPipeline(promptText, onStepCallback = ()
   steps.push(s4);
   onStepCallback(s4);
 
-  // Run validation validation
+  // Run validation
   const validation = validateSchema(mockConfig);
   if (!validation.valid) {
     console.error("[Mock Compiler] Critical validation failure in mock schema templates!", validation.errors);

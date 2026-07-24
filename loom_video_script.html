@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Loom Presentation Script - AI Compiler</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #2563eb;
+      --secondary: #64748b;
+      --dark: #0f172a;
+      --light: #f8fafc;
+      --rainbow-red: #ef4444;
+      --rainbow-orange: #f97316;
+      --rainbow-yellow: #eab308;
+      --rainbow-green: #22c55e;
+      --rainbow-blue: #3b82f6;
+      --rainbow-purple: #a855f7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--dark);
+      background-color: #ffffff;
+      line-height: 1.6;
+      padding: 2.5rem;
+      max-width: 850px;
+      margin: 0 auto;
+    }
+
+    .header-container {
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-rainbow {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      width: 28px;
+    }
+
+    .logo-bar {
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    .brand-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--dark);
+    }
+    
+    .brand-name span {
+      font-weight: 400;
+      color: var(--secondary);
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 0.85rem;
+      color: var(--secondary);
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--secondary);
+      margin-bottom: 2rem;
+    }
+
+    .print-banner {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      padding: 1rem;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2.5rem;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background-color: var(--light);
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .section-card {
+      background: var(--light);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      page-break-inside: avoid;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .section-time {
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: #dbeafe;
+      color: var(--primary);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+    }
+
+    .visual-notes {
+      font-size: 0.9rem;
+      color: var(--secondary);
+      background: #ffffff;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .narration {
+      font-size: 1rem;
+      color: var(--dark);
+      background: #ffffff;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px dashed #cbd5e1;
+      font-style: italic;
+    }
+
+    .tips-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 1.25rem;
+      border-radius: 16px;
+      margin-top: 3rem;
+      page-break-inside: avoid;
+    }
+
+    .tips-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tips-list {
+      list-style-type: decimal;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    .tips-list li {
+      margin-bottom: 0.4rem;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        max-width: 100%;
+      }
+      .print-banner {
+        display: none;
+      }
+      .section-card {
+        border: none;
+        background: transparent;
+        padding: 0;
+        margin-bottom: 3rem;
+      }
+      .visual-notes {
+        background: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .narration {
+        border: 1px solid #e2e8f0;
+      }
+      .section-time {
+        border: 1px solid var(--primary);
+        background: transparent !important;
+        color: var(--primary) !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-container">
+    <div class="logo-container">
+      <div class="logo-rainbow">
+        <div class="logo-bar" style="background: var(--rainbow-red)"></div>
+        <div class="logo-bar" style="background: var(--rainbow-orange)"></div>
+        <div class="logo-bar" style="background: var(--rainbow-yellow)"></div>
+        <div class="logo-bar" style="background: var(--rainbow-green)"></div>
+        <div class="logo-bar" style="background: var(--rainbow-blue)"></div>
+        <div class="logo-bar" style="background: var(--rainbow-purple)"></div>
+      </div>
+      <div class="brand-name">AI<span>Compiler</span></div>
+    </div>
+    <div class="doc-meta">
+      <strong>Saumya Ranga</strong><br>
+      Presentation Script (7 Mins)
+    </div>
+  </div>
+
+  <h1>AI Compiler Loom Presentation Script</h1>
+  <div class="subtitle">A structured 7-minute narration and demo guide for your internship submission.</div>
+
+  <div class="print-banner">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+    </svg>
+    <span><strong>Print Instructions:</strong> Press <strong>Ctrl + P</strong> (Windows) or <strong>Cmd + P</strong> (Mac), make sure background graphics are enabled, and choose "Save as PDF" to generate your script document!</span>
+  </div>
+
+  <h2>⏱️ Presentation Outline</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Section</th>
+        <th>Topic</th>
+        <th>Duration</th>
+        <th>Screen Focus</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1</strong></td>
+        <td>Introduction & Redesigned UI Overview</td>
+        <td>1:00 min</td>
+        <td>Compiler Workspace Tab (Hero Title & Input Card)</td>
+      </tr>
+      <tr>
+        <td><strong>2</strong></td>
+        <td>Compiler Pipeline & Local Mock Engine</td>
+        <td>1:30 min</td>
+        <td>Code: pipeline.js & mockGenerator.js</td>
+      </tr>
+      <tr>
+        <td><strong>3</strong></td>
+        <td>Cross-Layer Validation & Self-Healing</td>
+        <td>1:00 min</td>
+        <td>Code: validator.js & Repair log outputs</td>
+      </tr>
+      <tr>
+        <td><strong>4</strong></td>
+        <td>Sandbox Runtime Live Simulation Demo</td>
+        <td>2:30 min</td>
+        <td>Interactive Simulator (CRM / Gaming Platform)</td>
+      </tr>
+      <tr>
+        <td><strong>5</strong></td>
+        <td>Evaluation Suite & Benchmarks</td>
+        <td>0:45 min</td>
+        <td>Superagents Tab (Metrics & datasets)</td>
+      </tr>
+      <tr>
+        <td><strong>6</strong></td>
+        <td>Summary & Conclusion</td>
+        <td>0:15 min</td>
+        <td>GitHub repository overview</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>🎙️ Narration Guide</h2>
+
+  <!-- Section 1 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">Section 1: Introduction & Redesigned UI Overview</div>
+      <div class="section-time">0:00 - 1:00</div>
+    </div>
+    <div class="visual-notes">
+      <strong>Visual Focus:</strong> Web browser showing the active Compiler Workspace home page. Cursor pointing to the rainbow header logo, sticky menus, Apps/Superagents toggle selector, prompt card textarea, and presets below.
+    </div>
+    <div class="narration">
+      "Hello everyone! My name is Saumya Ranga, and today I'm excited to present my project submission for the AI Engineer position: the AI Compiler.<br><br>
+      Unlike standard prompt engineering tasks, this is a system design, reliability, and compiler runtime execution problem. First, you will notice the clean visual interface. I have redesigned the landing experience to match the premium aesthetics of the Base44 home page. We have a sticky header with a custom concentric-arc rainbow shape logo, navigation dropdowns, a centered capsule toggle that switches between 'Apps' and 'Superagents', and a centered hero section with a clean title: 'Compile requirements into secure, running web systems'.<br><br>
+      The prompt input card is fully rounded, containing a borderless text area and a bottom utility row with a '+' configuration button, a 'Plan' toggle switch, a microphone icon, and a circular royal-blue compilation submit arrow button. Let's see how this compiles open-ended instructions into verified apps."
+    </div>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">Section 2: Compiler Pipeline & Local Mock Engine</div>
+      <div class="section-time">1:00 - 2:30</div>
+    </div>
+    <div class="visual-notes">
+      <strong>Visual Focus:</strong> Open backend/pipeline.js and backend/mockGenerator.js in VS Code, or trigger a compiler run in the browser and show the 4 stages animating in the Logs panel.
+    </div>
+    <div class="narration">
+      "To ensure predictable structures, the compiler executes a modular four-stage pipeline, much like a traditional language compiler.<br><br>
+      1. Stage 1 (Intent Extraction): Parses the instruction into structured pages, features, roles, and database entities.<br>
+      2. Stage 2 (System Design): Maps features to UI screens, database tables, and REST API endpoints.<br>
+      3. Stage 3 (Schema Generation): Generates concrete UI configurations, DB schemas, and auth matrices.<br>
+      4. Stage 4 (Refinement): Resolves relational consistency.<br><br>
+      We also developed an offline mock compiler engine in mockGenerator.js. If the Gemini API key is missing or calls fail due to transient errors, the pipeline automatically routes requests to this local engine, mimicking the 4 compiler phases with realistic timing delays and ensuring 100% server resilience."
+    </div>
+  </div>
+
+  <!-- Section 3 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">Section 3: Cross-Layer Validation & Self-Healing</div>
+      <div class="section-time">2:30 - 3:30</div>
+    </div>
+    <div class="visual-notes">
+      <strong>Visual Focus:</strong> Highlight the cross-layer relationships in backend/validator.js (line checking GET endpoints and POST actions) and the repair loop in pipeline.js.
+    </div>
+    <div class="narration">
+      "The heart of this system is the Static Validation & Repair Engine located in backend/validator.js. It enforces cross-layer relational integrity:<br><br>
+      - It guarantees that every UI page component dataSource references a valid GET API endpoint.<br>
+      - It verifies that every CRUD table action corresponds to valid POST, PUT, or DELETE API routes.<br>
+      - It verifies that all database tables have auto-incrementing integer primary keys.<br><br>
+      If validation errors are found, the compiler doesn't blindly retry the full generation. Instead, it captures the exact error details and feeds them along with the draft schema back to the LLM. It runs up to 3 targeted repair attempts to heal the schema surgically. If the final output cannot satisfy the validator, the compile fails."
+    </div>
+  </div>
+
+  <!-- Section 4 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">Section 4: Sandbox Runtime Live Simulation Demo</div>
+      <div class="section-time">3:30 - 6:00</div>
+    </div>
+    <div class="visual-notes">
+      <strong>Visual Focus:</strong> Browser scroll to the compiled Sandbox Simulator. Open "Tournament Admin" paywall -> Click "Unlock Screen for $9.99/mo" -> Go to "Team Registry" -> click "Add New" -> create Alpha Squad -> Switch user role dropdown from Admin to Player.
+    </div>
+    <div class="narration">
+      "Once compiled, the resulting configuration is executed instantly in our React Sandbox Runtime.<br><br>
+      Let's compile the Gaming Platform preset. When it finishes, we scroll down to see the live sandbox. The simulator dynamically interprets the compiled configuration. If I navigate to the 'Tournament Admin' panel, the sandbox enforces our auth gating schema, presenting a premium paywall card. Clicking 'Unlock' simulates a payment and renders our metrics grids and SVGs.<br><br>
+      If I switch to 'Team Registry', we see a live database viewer. Clicking 'Add New' opens a modal. This modal is self-healing: if form inputs aren't defined in the compiler output, the frontend dynamically generates text boxes matching the table columns on the fly. Let's add a team named 'Alpha Squad' with captain 'Saumya'. Once I click create, the record is immediately pushed to our in-memory DB and updates the UI table!<br><br>
+      I can also switch roles to 'Player' in the control bar, and the sidebar menu instantly restricts access according to our compiled permission matrix."
+    </div>
+  </div>
+
+  <!-- Section 5 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">Section 5: Evaluation Dashboard & Metrics</div>
+      <div class="section-time">6:00 - 6:45</div>
+    </div>
+    <div class="visual-notes">
+      <strong>Visual Focus:</strong> Evaluation Suite tab. Point to success rate circle, avg latency, repairs number, and cost calculator.
+    </div>
+    <div class="narration">
+      "Finally, we built an Evaluation Framework in backend/evaluator.js with a test dataset of 10 standard prompts and 10 complex edge cases.<br><br>
+      This dashboard displays actual live metrics. We track success rates, average end-to-end latency, USD token expenses, and failure types.<br><br>
+      This framework allows us to balance the cost-quality tradeoff: by default, we utilize the fast, cost-efficient gemini-2.5-flash model, and cascade to gemini-1.5-pro only if retries fail, maintaining maximum quality with minimal cost."
+    </div>
+  </div>
+
+  <!-- Section 6 -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">Section 6: Summary & Conclusion</div>
+      <div class="section-time">6:45 - 7:00</div>
+    </div>
+    <div class="visual-notes">
+      <strong>Visual Focus:</strong> Return to the redesigned header logo, then show the clean folder hierarchy in VS Code.
+    </div>
+    <div class="narration">
+      "The complete workspace code is structured, modularized, and pushed to my GitHub repository. In conclusion, this compiler system solves software generation by prioritizing predictability, static validator enforcement, and live simulator execution. Thank you so much for your time!"
+    </div>
+  </div>
+
+  <div class="tips-box">
+    <div class="tips-title">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364.364l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+      </svg>
+      Quick Recording Tips
+    </div>
+    <ul class="tips-list">
+      <li><strong>Warm-up Compile:</strong> Run a compilation run on the "CRM" or "Gaming Platform" prompt before recording so the mock database has records immediately visible.</li>
+      <li><strong>Speak Steadily:</strong> Avoid speaking too fast. Keep your tone professional, authoritative, and descriptive.</li>
+      <li><strong>Print to PDF:</strong> Open this file in your browser, press Ctrl+P, enable background graphics in settings, and choose "Save as PDF" to save it locally.</li>
+    </ul>
+  </div>
+
+</body>
+</html>

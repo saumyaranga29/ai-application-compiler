@@ -83,11 +83,11 @@ async function callGemini(systemPrompt, userPrompt, jsonMode = true) {
   throw new Error(`All generative models failed. Last error details: ${lastError.message}`);
 }
 
-export async function runCompilationPipeline(userRequirement, onStepCallback = () => {}) {
+export async function runCompilationPipeline(userRequirement, onStepCallback = () => {}, previousSchema = null) {
   const isDummyKey = !apiKey || apiKey.startsWith("AIzaSyBO8lpFvolOYi_kHP2hqjNMnnthZ-J-6yg") || apiKey === "";
   if (isDummyKey) {
     console.log("[Pipeline] Using local simulation engine (API key not configured or is placeholder).");
-    return runMockCompilationPipeline(userRequirement, onStepCallback);
+    return runMockCompilationPipeline(userRequirement, onStepCallback, previousSchema);
   }
 
   const steps = [];
@@ -122,9 +122,13 @@ Return ONLY valid JSON matching this schema:
   "entities": ["string"],
   "assumptions": ["string"]
 }`;
-    const s1Output = await callGemini(s1System, `User Requirement:\n"${currentInput}"`);
+    let s1UserPrompt = `User Requirement:\n"${currentInput}"`;
+    if (previousSchema) {
+      s1UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+    const s1Output = await callGemini(s1System, s1UserPrompt);
     const s1Latency = Date.now() - s1Start;
-    logStep("Intent Extraction", "completed", s1Latency, { requirement: currentInput }, s1Output);
+    logStep("Intent Extraction", "completed", s1Latency, { requirement: currentInput, previousSchema }, s1Output);
 
     // ----------------------------------------------------
     // STAGE 2: SYSTEM DESIGN LAYER
@@ -150,7 +154,11 @@ Return ONLY valid JSON matching this structure:
   "authPermissions": {},
   "businessRules": [{"ruleId": "string", "description": "string"}]
 }`;
-    const s2Output = await callGemini(s2System, `Intent JSON:\n${JSON.stringify(s1Output, null, 2)}`);
+    let s2UserPrompt = `Intent JSON:\n${JSON.stringify(s1Output, null, 2)}`;
+    if (previousSchema) {
+      s2UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+    const s2Output = await callGemini(s2System, s2UserPrompt);
     const s2Latency = Date.now() - s2Start;
     logStep("System Design", "completed", s2Latency, s1Output, s2Output);
 
@@ -184,7 +192,11 @@ Return ONLY valid JSON matching this exact structure:
   "authSchema": { "roles": {}, "gating": {} },
   "logicSchema": { "rules": [] }
 }`;
-    const s3Output = await callGemini(s3System, `Architecture JSON:\n${JSON.stringify(s2Output, null, 2)}`);
+    let s3UserPrompt = `Architecture JSON:\n${JSON.stringify(s2Output, null, 2)}`;
+    if (previousSchema) {
+      s3UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+    const s3Output = await callGemini(s3System, s3UserPrompt);
     const s3Latency = Date.now() - s3Start;
     logStep("Schema Generation", "completed", s3Latency, s2Output, s3Output);
 
@@ -203,7 +215,11 @@ Ensure that:
 - Role lists are consistent everywhere.
 Correct any issues and return the final, clean, and consolidated application configuration JSON.
 Return ONLY valid JSON matching the Stage 3 format.`;
-    const s4Output = await callGemini(s4System, `Schema JSON:\n${JSON.stringify(s3Output, null, 2)}`);
+    let s4UserPrompt = `Schema JSON:\n${JSON.stringify(s3Output, null, 2)}`;
+    if (previousSchema) {
+      s4UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+    const s4Output = await callGemini(s4System, s4UserPrompt);
     const s4Latency = Date.now() - s4Start;
     logStep("Refinement Layer", "completed", s4Latency, s3Output, s4Output);
 
@@ -262,7 +278,7 @@ Return ONLY the corrected, valid JSON.`;
 
   } catch (error) {
     console.warn(`[Pipeline Warning] Generative AI pipeline failed: ${error.message}. Falling back to local offline compiler...`);
-    return runMockCompilationPipeline(userRequirement, onStepCallback);
+    return runMockCompilationPipeline(userRequirement, onStepCallback, previousSchema);
   }
 
   return {

@@ -1,40 +1,74 @@
 /**
  * Static Validation Engine for AI App Compiler
- * Checks cross-layer consistency and structural validity.
+ * Checks cross-layer consistency and structural validity using a Rules Engine pattern.
  */
-export function validateSchema(schema) {
-  const errors = [];
 
-  if (!schema || typeof schema !== 'object') {
-    return { valid: false, errors: ['Output is not a valid JSON object'] };
+export class ValidationRule {
+  constructor(name, description) {
+    this.name = name;
+    this.description = description;
   }
 
-  // 1. Check Top-Level Keys
-  const requiredTopKeys = ['appName', 'description', 'roles', 'dbSchema', 'apiSchema', 'uiSchema', 'authSchema', 'logicSchema'];
-  for (const key of requiredTopKeys) {
-    if (schema[key] === undefined) {
-      errors.push(`Missing required top-level configuration key: "${key}"`);
+  /**
+   * Validates the schema config.
+   * @param {Object} schema - The full application configuration schema.
+   * @param {Object} context - Compilation/evaluation context to pass state between rules.
+   * @returns {string[]} An array of validation error messages.
+   */
+  validate(schema, context) {
+    throw new Error("validate() must be implemented by subclasses");
+  }
+}
+
+// 1. Top-Level Keys Rule
+export class RequiredTopLevelKeysRule extends ValidationRule {
+  constructor() {
+    super("RequiredTopLevelKeysRule", "Verifies the presence of all required top-level configuration layers.");
+  }
+
+  validate(schema, context) {
+    const errors = [];
+    const requiredTopKeys = ['appName', 'description', 'roles', 'dbSchema', 'apiSchema', 'uiSchema', 'authSchema', 'logicSchema'];
+    for (const key of requiredTopKeys) {
+      if (schema[key] === undefined) {
+        errors.push(`Missing required top-level configuration key: "${key}"`);
+      }
     }
+    return errors;
+  }
+}
+
+// 2. Roles Definition Rule
+export class RolesDefinitionRule extends ValidationRule {
+  constructor() {
+    super("RolesDefinitionRule", "Ensures the user roles list is a non-empty array of strings.");
   }
 
-  if (errors.length > 0) {
-    return { valid: false, errors };
+  validate(schema, context) {
+    const errors = [];
+    const roles = schema.roles;
+    if (!Array.isArray(roles) || roles.length === 0) {
+      errors.push('Roles configuration must be a non-empty array of strings.');
+    }
+    return errors;
+  }
+}
+
+// 3. Database Schema Rule
+export class DatabaseSchemaRule extends ValidationRule {
+  constructor() {
+    super("DatabaseSchemaRule", "Validates table declarations, primary key fields, and types.");
   }
 
-  // Extract layers
-  const { appName, roles, dbSchema, apiSchema, uiSchema, authSchema, logicSchema } = schema;
+  validate(schema, context) {
+    const errors = [];
+    const dbSchema = schema.dbSchema;
 
-  // 2. Roles Validation
-  if (!Array.isArray(roles) || roles.length === 0) {
-    errors.push('Roles configuration must be a non-empty array of strings.');
-  }
-  const roleSet = new Set(roles || []);
+    if (!dbSchema || !Array.isArray(dbSchema.tables)) {
+      errors.push('Database schema (dbSchema.tables) must be an array.');
+      return errors;
+    }
 
-  // 3. Database Schema Validation
-  const dbTablesMap = new Map(); // name -> Set of fields
-  if (!dbSchema || !Array.isArray(dbSchema.tables)) {
-    errors.push('Database schema (dbSchema.tables) must be an array.');
-  } else {
     for (const table of dbSchema.tables) {
       if (!table.name || typeof table.name !== 'string') {
         errors.push('Database tables must have a valid string name.');
@@ -65,19 +99,29 @@ export function validateSchema(schema) {
       if (!hasPrimaryKey) {
         errors.push(`Database table "${table.name}" is missing a primaryKey field.`);
       }
-      dbTablesMap.set(table.name, fieldsSet);
+      context.dbTablesMap.set(table.name, fieldsSet);
     }
+    return errors;
+  }
+}
+
+// 4. API Schema Rule
+export class ApiSchemaRule extends ValidationRule {
+  constructor() {
+    super("ApiSchemaRule", "Validates HTTP methods, path definitions, authorized roles, and DB operation consistency.");
   }
 
-  // 4. API Schema Validation
-  const getEndpoints = new Set(); // path
-  const postEndpoints = new Set(); // path
-  const deleteEndpoints = new Set(); // path
-  const putEndpoints = new Set(); // path
+  validate(schema, context) {
+    const errors = [];
+    const apiSchema = schema.apiSchema;
+    const roleSet = context.roleSet;
+    const dbTablesMap = context.dbTablesMap;
 
-  if (!apiSchema || !Array.isArray(apiSchema.endpoints)) {
-    errors.push('API schema (apiSchema.endpoints) must be an array.');
-  } else {
+    if (!apiSchema || !Array.isArray(apiSchema.endpoints)) {
+      errors.push('API schema (apiSchema.endpoints) must be an array.');
+      return errors;
+    }
+
     for (const endpoint of apiSchema.endpoints) {
       if (!endpoint.path || typeof endpoint.path !== 'string') {
         errors.push('API endpoint is missing a valid path string.');
@@ -88,11 +132,11 @@ export function validateSchema(schema) {
         errors.push(`API endpoint "${endpoint.path}" has an invalid method "${method}". Must be GET, POST, PUT, or DELETE.`);
       }
 
-      // Catalog endpoints
-      if (method === 'GET') getEndpoints.add(endpoint.path);
-      if (method === 'POST') postEndpoints.add(endpoint.path);
-      if (method === 'PUT') putEndpoints.add(endpoint.path);
-      if (method === 'DELETE') deleteEndpoints.add(endpoint.path);
+      // Catalog endpoints for UI rule verification
+      if (method === 'GET') context.getEndpoints.add(endpoint.path);
+      if (method === 'POST') context.postEndpoints.add(endpoint.path);
+      if (method === 'PUT') context.putEndpoints.add(endpoint.path);
+      if (method === 'DELETE') context.deleteEndpoints.add(endpoint.path);
 
       // Verify roles in API endpoints
       if (Array.isArray(endpoint.allowedRoles)) {
@@ -121,13 +165,30 @@ export function validateSchema(schema) {
         }
       }
     }
+    return errors;
+  }
+}
+
+// 5. UI Schema Rule
+export class UiSchemaRule extends ValidationRule {
+  constructor() {
+    super("UiSchemaRule", "Validates user navigation links and UI components mappings against active API routes.");
   }
 
-  // 5. UI Schema Validation
-  const uiPageIds = new Set();
-  if (!uiSchema || !Array.isArray(uiSchema.pages)) {
-    errors.push('UI schema (uiSchema.pages) must be an array.');
-  } else {
+  validate(schema, context) {
+    const errors = [];
+    const uiSchema = schema.uiSchema;
+    const roleSet = context.roleSet;
+    const getEndpoints = context.getEndpoints;
+    const postEndpoints = context.postEndpoints;
+    const putEndpoints = context.putEndpoints;
+    const deleteEndpoints = context.deleteEndpoints;
+
+    if (!uiSchema || !Array.isArray(uiSchema.pages)) {
+      errors.push('UI schema (uiSchema.pages) must be an array.');
+      return errors;
+    }
+
     // Check Navigation targets
     if (uiSchema.layout && Array.isArray(uiSchema.layout.navigation)) {
       for (const nav of uiSchema.layout.navigation) {
@@ -146,7 +207,7 @@ export function validateSchema(schema) {
         errors.push('UI page is missing a valid id.');
         continue;
       }
-      uiPageIds.add(page.id);
+      context.uiPageIds.add(page.id);
 
       if (!Array.isArray(page.components)) {
         errors.push(`UI page "${page.id}" components must be an array.`);
@@ -192,32 +253,105 @@ export function validateSchema(schema) {
     // Verify nav targets map to defined pages
     if (uiSchema.layout && Array.isArray(uiSchema.layout.navigation)) {
       for (const nav of uiSchema.layout.navigation) {
-        if (!uiPageIds.has(nav.targetPage)) {
+        if (!context.uiPageIds.has(nav.targetPage)) {
           errors.push(`UI Sidebar navigation targets page "${nav.targetPage}" which is not defined in uiSchema.pages.`);
         }
       }
     }
+
+    return errors;
+  }
+}
+
+// 6. Auth Schema Rule
+export class AuthSchemaRule extends ValidationRule {
+  constructor() {
+    super("AuthSchemaRule", "Validates subscription gating pages and role authorization definitions.");
   }
 
-  // 6. Auth Schema Validation
-  if (authSchema) {
-    if (authSchema.roles) {
-      for (const r of Object.keys(authSchema.roles)) {
-        if (!roleSet.has(r)) {
-          errors.push(`Auth schema contains rules for undefined role "${r}".`);
+  validate(schema, context) {
+    const errors = [];
+    const authSchema = schema.authSchema;
+    const roleSet = context.roleSet;
+    const uiPageIds = context.uiPageIds;
+
+    if (authSchema) {
+      if (authSchema.roles) {
+        for (const r of Object.keys(authSchema.roles)) {
+          if (!roleSet.has(r)) {
+            errors.push(`Auth schema contains rules for undefined role "${r}".`);
+          }
         }
       }
-    }
-    if (authSchema.gating) {
-      for (const [gateName, gate] of Object.entries(authSchema.gating)) {
-        if (Array.isArray(gate.gatedPages)) {
-          for (const pageId of gate.gatedPages) {
-            if (!uiPageIds.has(pageId)) {
-              errors.push(`Auth gating rule "${gateName}" gates page "${pageId}" which is not defined in uiSchema.pages.`);
+      if (authSchema.gating) {
+        for (const [gateName, gate] of Object.entries(authSchema.gating)) {
+          if (Array.isArray(gate.gatedPages)) {
+            for (const pageId of gate.gatedPages) {
+              if (!uiPageIds.has(pageId)) {
+                errors.push(`Auth gating rule "${gateName}" gates page "${pageId}" which is not defined in uiSchema.pages.`);
+              }
             }
           }
         }
       }
+    }
+    return errors;
+  }
+}
+
+// Expose full rules array for custom executions/inspections
+export const rules = [
+  new RequiredTopLevelKeysRule(),
+  new RolesDefinitionRule(),
+  new DatabaseSchemaRule(),
+  new ApiSchemaRule(),
+  new UiSchemaRule(),
+  new AuthSchemaRule()
+];
+
+/**
+ * Validates the schema package.
+ * @param {Object} schema - The full application schema.
+ * @returns {Object} { valid: boolean, errors: string[] }
+ */
+export function validateSchema(schema) {
+  if (!schema || typeof schema !== 'object') {
+    return { valid: false, errors: ['Output is not a valid JSON object'] };
+  }
+
+  // Rule 1: Check top-level keys first. If failed, return immediately to avoid downstream reference errors.
+  const topLevelRule = new RequiredTopLevelKeysRule();
+  const topLevelErrors = topLevelRule.validate(schema);
+  if (topLevelErrors.length > 0) {
+    return { valid: false, errors: topLevelErrors };
+  }
+
+  // Set up execution context to pass catalogs between rules
+  const context = {
+    roleSet: new Set(schema.roles || []),
+    dbTablesMap: new Map(),
+    getEndpoints: new Set(),
+    postEndpoints: new Set(),
+    putEndpoints: new Set(),
+    deleteEndpoints: new Set(),
+    uiPageIds: new Set()
+  };
+
+  const errors = [];
+  const activeRules = [
+    new RolesDefinitionRule(),
+    new DatabaseSchemaRule(),
+    new ApiSchemaRule(),
+    new UiSchemaRule(),
+    new AuthSchemaRule()
+  ];
+
+  for (const rule of activeRules) {
+    try {
+      const ruleErrors = rule.validate(schema, context);
+      errors.push(...ruleErrors);
+    } catch (err) {
+      errors.push(`Validation rule "${rule.name}" crashed: ${err.message}`);
     }
   }
 

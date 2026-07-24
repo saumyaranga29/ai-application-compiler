@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { runCompilationPipeline } from "./pipeline.js";
 import { evaluationDataset } from "./dataset.js";
 import { runSingleEvaluation, runFullEvaluationSuite, getEvaluationReport } from "./evaluator.js";
+import { generateMockConfig } from "./mockGenerator.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,17 +26,32 @@ app.get("/api/health", (req, res) => {
 
 // Main Compilation Endpoint
 app.post("/api/compile", async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, previousSchema } = req.body;
   if (!prompt || typeof prompt !== "string") {
     return res.status(400).json({ error: "Missing required parameter 'prompt' (string)" });
   }
 
   try {
     console.log(`Received compilation request for prompt: "${prompt.slice(0, 60)}..."`);
-    const result = await runCompilationPipeline(prompt);
+    const result = await runCompilationPipeline(prompt, undefined, previousSchema);
     res.json(result);
   } catch (error) {
     console.error("Compilation error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Instant Compilation Endpoint (Bypasses delays and compiles immediately for demo presets)
+app.post("/api/compile/instant", (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt || typeof prompt !== "string") {
+    return res.status(400).json({ error: "Missing required parameter 'prompt' (string)" });
+  }
+  try {
+    const finalConfig = generateMockConfig(prompt);
+    res.json({ status: "success", finalConfig });
+  } catch (error) {
+    console.error("Instant compilation error:", error);
     res.status(500).json({ error: error.message });
   }
 });
