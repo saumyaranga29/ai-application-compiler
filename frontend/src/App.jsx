@@ -784,6 +784,23 @@ export default function App() {
 
   // Handle Row Deletion
   const handleDeleteRecord = (table, id) => {
+    // Check if the current user role is allowed to delete from this table
+    if (finalConfig && finalConfig.apiSchema && Array.isArray(finalConfig.apiSchema.endpoints)) {
+      const deleteEndpoint = finalConfig.apiSchema.endpoints.find(ep => 
+        ep.dbOperation?.table === table && ep.dbOperation?.type === "DELETE"
+      );
+      
+      if (deleteEndpoint && Array.isArray(deleteEndpoint.allowedRoles)) {
+        const isAllowed = deleteEndpoint.allowedRoles.some(role => 
+          role.toLowerCase() === currentUserRole.toLowerCase()
+        );
+        if (!isAllowed) {
+          showToast(`Access Denied: Role '${currentUserRole}' is not authorized to delete records.`);
+          return;
+        }
+      }
+    }
+
     setMockDB(prev => ({
       ...prev,
       [table]: (prev[table] || []).filter(r => r.id !== id)
@@ -1580,6 +1597,24 @@ export default function App() {
                                           className="btn btn-primary"
                                           style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", borderRadius: "6px" }}
                                           onClick={() => {
+                                            // Check role authorization for create action endpoint
+                                            const createAction = comp.actions?.create;
+                                            const createEndpoint = createAction && finalConfig?.apiSchema?.endpoints
+                                              ? finalConfig.apiSchema.endpoints.find(ep => 
+                                                  ep.path === createAction.endpoint && ep.method === (createAction.method || "POST")
+                                                )
+                                              : null;
+
+                                            if (createEndpoint && Array.isArray(createEndpoint.allowedRoles)) {
+                                              const isAllowed = createEndpoint.allowedRoles.some(role => 
+                                                role.toLowerCase() === currentUserRole.toLowerCase()
+                                              );
+                                              if (!isAllowed) {
+                                                showToast(`Access Denied: Role '${currentUserRole}' is not authorized to create records.`);
+                                                return;
+                                              }
+                                            }
+
                                             const actionWithFields = { ...comp.actions.create };
                                             if (!actionWithFields.fields) {
                                               actionWithFields.fields = normalizedCols
