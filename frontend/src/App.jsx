@@ -253,6 +253,7 @@ export default function App() {
   const [showCrudModal, setShowCrudModal] = useState(false);
   const [crudModalConfig, setCrudModalConfig] = useState(null);
   const [crudFormData, setCrudFormData] = useState({});
+  const [simulatorFormValues, setSimulatorFormValues] = useState({});
   const [crudErrors, setCrudErrors] = useState({});
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -2172,7 +2173,110 @@ Return ONLY valid JSON matching the Stage 3 format.`;
                                 );
                               }
 
-                              return null;
+                              if (comp.type === "form") {
+                                const action = comp.actions?.submit || comp.action || comp.actions?.create;
+                                const fields = comp.fields || [];
+                                const tableName = action?.endpoint 
+                                  ? finalConfig?.apiSchema?.endpoints?.find(ep => ep.path === action.endpoint && (ep.method === "POST" || ep.method === "PUT"))?.dbOperation?.table
+                                  : null;
+
+                                return (
+                                  <div key={compIdx} className="sim-card" style={{ maxWidth: "600px", margin: "1rem auto", border: "1px solid rgba(59, 130, 246, 0.15)", background: "#ffffff", padding: "1.5rem" }}>
+                                    <div className="sim-card-header" style={{ borderBottom: "1px solid rgba(59, 130, 246, 0.08)", paddingBottom: "0.75rem", marginBottom: "1rem" }}>
+                                      <h3 style={{ fontSize: "1rem", color: "var(--color-primary)", margin: 0 }}>{comp.title || "Form Submission"}</h3>
+                                    </div>
+                                    <form onSubmit={(e) => {
+                                      e.preventDefault();
+                                      
+                                      const errors = {};
+                                      fields.forEach(field => {
+                                        const valKey = `${activePageId}-${comp.id}-${field.name}`;
+                                        if (field.required && !simulatorFormValues[valKey]) {
+                                          errors[field.name] = `${field.label || field.name} is required`;
+                                        }
+                                      });
+
+                                      if (Object.keys(errors).length > 0) {
+                                        showToast(`Validation error: ${Object.values(errors)[0]}`);
+                                        return;
+                                      }
+
+                                      if (tableName) {
+                                        const currentRows = mockDB[tableName] || [];
+                                        const nextId = currentRows.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1;
+                                        
+                                        const newRecord = { id: nextId };
+                                        fields.forEach(field => {
+                                          const valKey = `${activePageId}-${comp.id}-${field.name}`;
+                                          newRecord[field.name] = simulatorFormValues[valKey];
+                                        });
+
+                                        setMockDB(prev => ({
+                                          ...prev,
+                                          [tableName]: [...(prev[tableName] || []), newRecord]
+                                        }));
+
+                                        showToast(`Successfully added record to ${tableName}!`);
+                                        
+                                        // clear values
+                                        const cleared = { ...simulatorFormValues };
+                                        fields.forEach(field => {
+                                          delete cleared[`${activePageId}-${comp.id}-${field.name}`];
+                                        });
+                                        setSimulatorFormValues(cleared);
+                                      } else {
+                                        showToast("Form submitted successfully!");
+                                      }
+                                    }} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                      {fields.map((field, fIdx) => {
+                                        const valKey = `${activePageId}-${comp.id}-${field.name}`;
+                                        return (
+                                          <div key={fIdx} style={{ display: "flex", flexDirection: "column", gap: "0.35rem", textAlign: "left" }}>
+                                            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>
+                                              {field.label || field.name} {field.required && <span style={{ color: "var(--color-danger)" }}>*</span>}
+                                            </label>
+                                            <input
+                                              type={field.type === "number" ? "number" : "text"}
+                                              value={simulatorFormValues[valKey] || ""}
+                                              onChange={(e) => {
+                                                setSimulatorFormValues(prev => ({
+                                                  ...prev,
+                                                  [valKey]: e.target.value
+                                                }));
+                                              }}
+                                              style={{ background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", outline: "none", height: "36px", borderRadius: "6px", padding: "0 0.5rem" }}
+                                              placeholder={`Enter ${field.label || field.name}...`}
+                                            />
+                                          </div>
+                                        );
+                                      })}
+                                      <button 
+                                        type="submit" 
+                                        className="btn btn-primary"
+                                        style={{ marginTop: "0.5rem", padding: "0.6rem", fontSize: "0.9rem", borderRadius: "8px" }}
+                                      >
+                                        {comp.submitLabel || "Submit"}
+                                      </button>
+                                    </form>
+                                  </div>
+                                );
+                              }
+
+                              // Unrecognized or custom component type fallback
+                              return (
+                                <div key={compIdx} className="sim-card" style={{ padding: "1.5rem", borderLeft: "4px solid var(--color-primary)", background: "#ffffff", textAlign: "left", margin: "1rem 0" }}>
+                                  <h3 style={{ fontSize: "1.05rem", color: "#0f172a", marginBottom: "0.5rem" }}>{comp.title || "Custom Component"}</h3>
+                                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0 }}>
+                                    Component type <code style={{ color: "var(--color-primary)", background: "rgba(59, 130, 246, 0.08)", padding: "0.1rem 0.3rem", borderRadius: "4px" }}>{comp.type}</code> is successfully compiled in this view.
+                                  </p>
+                                  <div style={{ marginTop: "1rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "6px", fontSize: "0.8rem", color: "#475569", border: "1px solid #e2e8f0" }}>
+                                    <strong>Component Specification Schema:</strong>
+                                    <pre style={{ margin: "0.5rem 0 0 0", overflowX: "auto", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#1e293b" }}>
+                                      {JSON.stringify(comp, null, 2)}
+                                    </pre>
+                                  </div>
+                                </div>
+                              );
                             })}
                           </div>
                         );
