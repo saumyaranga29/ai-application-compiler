@@ -230,14 +230,15 @@
 }
 
 .control-select {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border: 1px solid rgba(59, 130, 246, 0.15);
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
-  color: white;
+  color: #1e293b;
   font-size: 0.85rem;
   cursor: pointer;
   width: auto;
+  outline: none;
 }
 
 .sandbox-body {
@@ -276,8 +277,8 @@
 }
 
 .sandbox-menu-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: white;
+  background: rgba(59, 130, 246, 0.05);
+  color: var(--color-primary);
 }
 
 .sandbox-menu-item.active {
