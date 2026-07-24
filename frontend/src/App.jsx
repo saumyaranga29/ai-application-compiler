@@ -1576,7 +1576,7 @@ export default function App() {
                               if (comp.type === "table" || comp.type === "crud-table") {
                                 // Resolve Table records from GET path
                                 const getPath = comp.dataSource;
-                                const endpoint = finalConfig.apiSchema.endpoints.find(ep => ep.path === getPath && ep.method === "GET");
+                                const endpoint = finalConfig?.apiSchema?.endpoints?.find(ep => ep.path === getPath && ep.method === "GET");
                                 const tableName = endpoint?.dbOperation?.table;
                                 const records = mockDB[tableName] || [];
                                 
@@ -1588,33 +1588,35 @@ export default function App() {
                                   return col;
                                 });
 
+                                // Check active user permissions for UI buttons dynamically from schema endpoints
+                                const createAction = comp.actions?.create;
+                                const createEndpoint = createAction && finalConfig?.apiSchema?.endpoints
+                                  ? finalConfig.apiSchema.endpoints.find(ep => 
+                                      ep.path === createAction.endpoint && ep.method === (createAction.method || "POST")
+                                    )
+                                  : null;
+                                const isCreateAllowed = createEndpoint && Array.isArray(createEndpoint.allowedRoles)
+                                  ? createEndpoint.allowedRoles.some(r => r.toLowerCase() === currentUserRole.toLowerCase())
+                                  : true;
+
+                                const deleteEndpoint = finalConfig?.apiSchema?.endpoints
+                                  ? finalConfig.apiSchema.endpoints.find(ep => 
+                                      ep.dbOperation?.table === tableName && ep.dbOperation?.type === "DELETE"
+                                    )
+                                  : null;
+                                const isDeleteAllowed = deleteEndpoint && Array.isArray(deleteEndpoint.allowedRoles)
+                                  ? deleteEndpoint.allowedRoles.some(r => r.toLowerCase() === currentUserRole.toLowerCase())
+                                  : true;
+
                                 return (
                                   <div key={compIdx} className="sim-card">
                                     <div className="sim-card-header">
                                       <h3 style={{ fontSize: "1rem" }}>{comp.title || "Record Grid"}</h3>
-                                      {comp.type === "crud-table" && comp.actions?.create && (
+                                      {comp.type === "crud-table" && comp.actions?.create && isCreateAllowed && (
                                         <button 
                                           className="btn btn-primary"
                                           style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", borderRadius: "6px" }}
                                           onClick={() => {
-                                            // Check role authorization for create action endpoint
-                                            const createAction = comp.actions?.create;
-                                            const createEndpoint = createAction && finalConfig?.apiSchema?.endpoints
-                                              ? finalConfig.apiSchema.endpoints.find(ep => 
-                                                  ep.path === createAction.endpoint && ep.method === (createAction.method || "POST")
-                                                )
-                                              : null;
-
-                                            if (createEndpoint && Array.isArray(createEndpoint.allowedRoles)) {
-                                              const isAllowed = createEndpoint.allowedRoles.some(role => 
-                                                role.toLowerCase() === currentUserRole.toLowerCase()
-                                              );
-                                              if (!isAllowed) {
-                                                showToast(`Access Denied: Role '${currentUserRole}' is not authorized to create records.`);
-                                                return;
-                                              }
-                                            }
-
                                             const actionWithFields = { ...comp.actions.create };
                                             if (!actionWithFields.fields) {
                                               actionWithFields.fields = normalizedCols
@@ -1647,13 +1649,13 @@ export default function App() {
                                             {normalizedCols.map((col, cIdx) => (
                                               <th key={cIdx}>{col.header}</th>
                                             ))}
-                                            {comp.type === "crud-table" && <th>Actions</th>}
+                                            {comp.type === "crud-table" && isDeleteAllowed && <th>Actions</th>}
                                           </tr>
                                         </thead>
                                         <tbody>
                                           {records.length === 0 ? (
                                             <tr>
-                                              <td colSpan={normalizedCols.length + (comp.type === "crud-table" ? 1 : 0)} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
+                                              <td colSpan={normalizedCols.length + (comp.type === "crud-table" && isDeleteAllowed ? 1 : 0)} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
                                                 No database records found.
                                               </td>
                                             </tr>
@@ -1674,7 +1676,7 @@ export default function App() {
                                                     )}
                                                   </td>
                                                 ))}
-                                                {comp.type === "crud-table" && (
+                                                {comp.type === "crud-table" && isDeleteAllowed && (
                                                   <td>
                                                     <button 
                                                       style={{ background: "transparent", border: "none", color: "var(--color-danger)", cursor: "pointer" }}
