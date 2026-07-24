@@ -331,6 +331,6 @@ button:disabled {
 }
 
 .custom-table tr:hover td {
-  background: rgba(255, 255, 255, 0.015);
-  color: white;
+  background: rgba(59, 130, 246, 0.03);
+  color: var(--text-primary);
 }
