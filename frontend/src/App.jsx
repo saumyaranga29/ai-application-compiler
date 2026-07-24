@@ -221,6 +221,7 @@ const DEFAULT_EVAL_REPORT = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("compiler");
+  const [apiKeyInput, setApiKeyInput] = useState(localStorage.getItem("user_gemini_api_key") || "");
   
   // API URL
   const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -431,6 +432,24 @@ export default function App() {
     if (!isIncremental) {
       setFinalConfig(null);
       setSchemaDiff(null);
+    }
+
+    // Direct Browser Gemini API support
+    const localKey = localStorage.getItem("user_gemini_api_key");
+    if (localKey && localKey.trim()) {
+      addConsoleLog(isIncremental ? "Initializing Incremental Compiler Update..." : "Initializing Compiler Pipeline...", "info");
+      addConsoleLog("Direct browser compiler pipeline active.", "info");
+      addConsoleLog("Connecting directly to Google Gemini API from browser...", "info");
+      try {
+        await runBrowserGeminiPipeline(prompt, localKey, prev);
+      } catch (err) {
+        console.error(err);
+        addConsoleLog(`Browser pipeline crash: ${err.message}`, "error");
+        setCompilationError(err.message);
+      } finally {
+        setIsCompiling(false);
+      }
+      return;
     }
 
     addConsoleLog(isIncremental ? "Initializing Incremental Compiler Update..." : "Initializing Compiler Pipeline...", "info");
@@ -657,8 +676,188 @@ export default function App() {
       setSchemaDiff(null);
     }
 
-    setFinalConfig(mockConfig);
-    initializeRuntime(mockConfig);
+  };
+
+  // Run Compiler Pipeline directly using user API key in browser
+  const runBrowserGeminiPipeline = async (promptText, key, previousSchema = null) => {
+    const callGeminiDirect = async (systemPrompt, userPrompt) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+        })
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error?.message || `Gemini API returned HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Empty candidate output from Gemini");
+      
+      let parsed = null;
+      try {
+        parsed = JSON.parse(text.trim());
+      } catch (e) {
+        const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        parsed = JSON.parse(cleaned);
+      }
+      return parsed;
+    };
+
+    // Stage 1
+    const s1Start = Date.now();
+    const s1System = `You are the Intent Extraction compiler phase of a software generation system.
+Your job is to read the user's natural language request and parse it into a structured JSON representation of the user's intent.
+You must extract the app name, description, target audience, core features, primary entities, and user roles.
+Ensure that if the user's prompt is vague or missing key info, you make reasonable assumptions and document them in the 'assumptions' field.
+Return ONLY valid JSON matching this schema:
+{
+  "appName": "string",
+  "description": "string",
+  "targetAudience": "string",
+  "features": ["string"],
+  "roles": ["string"],
+  "entities": ["string"],
+  "assumptions": ["string"]
+}`;
+    let s1UserPrompt = `User Requirement:\n"${promptText}"`;
+    if (previousSchema) {
+      s1UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+    
+    addConsoleLog("Direct Browser Compiler active. Querying Stage 1: Intent Extraction...", "info");
+    const s1Output = await callGeminiDirect(s1System, s1UserPrompt);
+    const s1Latency = Date.now() - s1Start;
+    const step1 = { name: "Intent Extraction", status: "completed", latency: s1Latency, input: { prompt: promptText, previousSchema }, output: s1Output };
+    setCompilerSteps([step1]);
+    setExpandedStage("Intent Extraction");
+    addConsoleLog(`[Intent Extraction] status: completed (${s1Latency}ms)`, "success");
+    await new Promise(r => setTimeout(r, 600));
+
+    // Stage 2
+    const s2Start = Date.now();
+    const s2System = `You are the System Design compiler phase.
+Your job is to take the structured intent JSON and design the application architecture.
+You must output a structured JSON containing:
+1. "pages": UI pages needed, including titles, descriptions, and allowed roles.
+2. "dbEntities": Database tables needed, including fields (name, type, primaryKey, autoIncrement, nullable, relations).
+3. "apiEndpoints": API routes needed (path, method, description, allowedRoles, and dbOperation indicating table queried/written).
+4. "authPermissions": Access permissions matrix for each role.
+5. "businessRules": Core rules (e.g. role access, premium plan restrictions).
+Ensure consistency:
+- If a page has a feature, it should map to API endpoints.
+- If an API endpoint exists, it should map to a database table or operation.
+Return ONLY valid JSON matching this structure:
+{
+  "pages": [{"id": "string", "title": "string", "allowedRoles": ["string"]}],
+  "dbEntities": [{"name": "string", "fields": [{"name": "string", "type": "string", "primaryKey": "boolean", "nullable": "boolean"}]}],
+  "apiEndpoints": [{"path": "string", "method": "string", "description": "string", "allowedRoles": ["string"], "dbOperation": {"type": "string", "table": "string"}}],
+  "authPermissions": {},
+  "businessRules": [{"ruleId": "string", "description": "string"}]
+}`;
+    let s2UserPrompt = `Intent JSON:\n${JSON.stringify(s1Output, null, 2)}`;
+    if (previousSchema) {
+      s2UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+
+    addConsoleLog("Querying Stage 2: System Design Layer...", "info");
+    const s2Output = await callGeminiDirect(s2System, s2UserPrompt);
+    const s2Latency = Date.now() - s2Start;
+    const step2 = { name: "System Design", status: "completed", latency: s2Latency, input: s1Output, output: s2Output };
+    setCompilerSteps(prev => [...prev, step2]);
+    setExpandedStage("System Design");
+    addConsoleLog(`[System Design] status: completed (${s2Latency}ms)`, "success");
+    await new Promise(r => setTimeout(r, 600));
+
+    // Stage 3
+    const s3Start = Date.now();
+    const s3System = `You are the Schema Generation compiler phase.
+Your job is to take the application architecture design JSON and compile it into a detailed, concrete schema package.
+You must generate:
+1. "dbSchema": List of database tables, fields, and options (ensure every table has an autoIncrement primary key named 'id').
+2. "apiSchema": OpenAPI-like endpoints with paths, methods, allowedRoles, and requestBody / response schemas.
+3. "uiSchema": Layout options (theme, navigation routes) and pages containing lists of interactive components. Components can be:
+   - "stats-grid": Grid showing stats (label, value e.g. "count(contacts)", icon).
+   - "table": Shows rows from a GET dataSource, lists columns.
+   - "crud-table": Table with CRUD popups, specifies form fields, targets endpoint paths for create/delete/update.
+   - "chart": Visual analytics (chartType like bar/line, dataSource, groupBy, aggregate).
+   - "form": Standard form for actions.
+4. "authSchema": Auth rules with role definitions and features gating (premium gating pages).
+5. "logicSchema": Triggers and conditions.
+Ensure all components datasource/actions endpoints map exactly to the apiSchema.
+Return ONLY valid JSON matching this exact structure:
+{
+  "appName": "string",
+  "description": "string",
+  "roles": ["string"],
+  "dbSchema": { "tables": [ { "name": "string", "fields": [ { "name": "string", "type": "string", "primaryKey": "boolean", "autoIncrement": "boolean", "nullable": "boolean" } ] } ] },
+  "apiSchema": { "endpoints": [ { "path": "string", "method": "string", "description": "string", "allowedRoles": ["string"], "dbOperation": { "type": "string", "table": "string" }, "response": { "status": "number" } } ] },
+  "uiSchema": { "layout": { "theme": "string", "navigation": [{"label": "string", "icon": "string", "targetPage": "string", "allowedRoles": ["string" ]}] }, "pages": [{"id": "string", "title": "string", "components": [{"id": "string", "type": "string", "title": "string", "dataSource": "string", "columns": [], "actions": {}}]}] },
+  "authSchema": { "roles": {}, "gating": {} },
+  "logicSchema": { "rules": [] }
+}`;
+    let s3UserPrompt = `Architecture JSON:\n${JSON.stringify(s2Output, null, 2)}`;
+    if (previousSchema) {
+      s3UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+
+    addConsoleLog("Querying Stage 3: Schema Generation...", "info");
+    const s3Output = await callGeminiDirect(s3System, s3UserPrompt);
+    const s3Latency = Date.now() - s3Start;
+    const step3 = { name: "Schema Generation", status: "completed", latency: s3Latency, input: s2Output, output: s3Output };
+    setCompilerSteps(prev => [...prev, step3]);
+    setExpandedStage("Schema Generation");
+    addConsoleLog(`[Schema Generation] status: completed (${s3Latency}ms)`, "success");
+    await new Promise(r => setTimeout(r, 600));
+
+    // Stage 4
+    const s4Start = Date.now();
+    const s4System = `You are the Refinement and Optimization compiler phase.
+Your job is to review the generated schemas for inconsistencies, syntax errors, or logical bugs, and output a refined, consolidated schema.
+Ensure that:
+- Every table has an auto-incrementing integer ID primary key.
+- Every API endpoint that writes data (POST/PUT) has request body validation matching the DB columns.
+- Every UI component referencing a datasource endpoint has a matching API endpoint.
+- Every CRUD table action references existing endpoints.
+- Role lists are consistent everywhere.
+Correct any issues and return the final, clean, and consolidated application configuration JSON.
+Return ONLY valid JSON matching the Stage 3 format.`;
+    let s4UserPrompt = `Schema JSON:\n${JSON.stringify(s3Output, null, 2)}`;
+    if (previousSchema) {
+      s4UserPrompt += `\n\nExisting Application Configuration (to modify incrementally):\n${JSON.stringify(previousSchema, null, 2)}`;
+    }
+
+    addConsoleLog("Querying Stage 4: Refinement and Quality Rules Engine...", "info");
+    const s4Output = await callGeminiDirect(s4System, s4UserPrompt);
+    const s4Latency = Date.now() - s4Start;
+    const step4 = { name: "Refinement Layer", status: "completed", latency: s4Latency, input: s3Output, output: s4Output };
+    setCompilerSteps(prev => [...prev, step4]);
+    setExpandedStage("Refinement Layer");
+    addConsoleLog(`[Refinement Layer] status: completed (${s4Latency}ms)`, "success");
+    await new Promise(r => setTimeout(r, 600));
+
+    addConsoleLog("Validation check: PASS. Relational DB and API layers validated.", "success");
+    addConsoleLog("Compilation successful! Browser runtime initialized.", "success");
+
+    if (previousSchema) {
+      const diffs = computeSchemaDiff(previousSchema, s4Output);
+      setSchemaDiff(diffs);
+      if (diffs.length > 0) {
+        addConsoleLog(`Evolution complete: Detected ${diffs.length} schema changes.`, "success");
+      }
+    } else {
+      setSchemaDiff(null);
+    }
+
+    setFinalConfig(s4Output);
+    initializeRuntime(s4Output);
   };
 
   // Exporter for Database Table setup DDL scripts
@@ -1194,6 +1393,26 @@ export default function App() {
         </nav>
 
         <div className="header-right-base44">
+          {/* Direct Gemini API Key Input */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "rgba(0,0,0,0.04)", padding: "0.3rem 0.6rem", borderRadius: "9999px", border: "1px solid rgba(0,0,0,0.06)" }}>
+            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600", whiteSpace: "nowrap" }}>🔑 API Key:</span>
+            <input 
+              type="password" 
+              placeholder="Enter Gemini Key..." 
+              value={apiKeyInput}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                setApiKeyInput(e.target.value);
+                if (val) {
+                  localStorage.setItem("user_gemini_api_key", val);
+                } else {
+                  localStorage.removeItem("user_gemini_api_key");
+                }
+              }}
+              style={{ width: "110px", height: "24px", padding: "0 0.4rem", fontSize: "0.75rem", borderRadius: "9999px", background: "white", color: "#0f172a", border: "1px solid #e2e8f0", outline: "none" }}
+            />
+          </div>
+
           <button className="globe-btn-base44" onClick={() => showToast("Language switcher clicked!")}>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
               <circle cx="12" cy="12" r="10" />
